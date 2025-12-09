@@ -1,0 +1,19 @@
+<div class="modal-overlay" *ngIf="show">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h5 class="modal-title">{{ title }}</h5>
+      <button class="close" (click)="onCancel()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <p>{{ message }}</p>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" (click)="onCancel()">Cancel</button>
+      <button class="btn btn-danger btn-sm" (click)="onConfirm()">Delete</button>
+    </div>
+
+  </div>
+</div>

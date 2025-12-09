@@ -1,0 +1,9 @@
+<div class="toast-wrapper" *ngIf="show">
+  <div class="toast-box" [ngClass]="type">
+    <i class="bi bi-check-circle" *ngIf="type === 'success'"></i>
+    <i class="bi bi-exclamation-triangle" *ngIf="type === 'warning'"></i>
+    <i class="bi bi-x-circle" *ngIf="type === 'error'"></i>
+
+    <span>{{ message }}</span>
+  </div>
+</div>

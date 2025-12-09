@@ -1,0 +1,64 @@
+/* You can add global styles to this file, and also import other style files */
+/* ===== Global Theme Variables ===== */
+:root {
+    --primary: #1D3557;
+    --primary-light: #457B9D;
+
+    --secondary: #2A9D8F;
+    --secondary-light: #A8E8DE;
+
+    --accent: #E76F51;
+
+    --bg-light: #F8FAFC;
+    --border-light: #E0E6ED;
+
+    --text-dark: #0D1B2A;
+    --text-light: #6C7A89;
+}
+
+/* ===== Global Styles ===== */
+body {
+    background: var(--bg-light);
+    font-family: "Inter", sans-serif;
+    color: var(--text-dark);
+    margin: 0;
+    padding: 0;
+}
+
+/* Headings */
+h1,
+h2,
+h3 {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+/* Buttons */
+.btn-primary {
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+
+.btn-primary:hover {
+    background: var(--primary-light) !important;
+}
+
+.btn-secondary {
+    background: var(--secondary) !important;
+    border-color: var(--secondary) !important;
+}
+
+.btn-secondary:hover {
+    background: var(--secondary-light) !important;
+}
+
+/* Line */
+hr {
+    border-color: var(--border-light);
+}
+
+/* Cards */
+.card {
+    border: 1px solid var(--border-light) !important;
+    border-radius: 14px !important;
+}

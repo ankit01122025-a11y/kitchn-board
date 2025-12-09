@@ -1,0 +1,56 @@
+<div class="multi-select-container">
+
+  <label class="ms-title">{{ label }}</label>
+
+  <!-- SELECT BOX -->
+  <div class="select-box" (click)="toggleDropdown(); touched()">
+
+    <div class="selected-area">
+
+      <!-- Placeholder -->
+      <ng-container *ngIf="!(value && value.length); else tagsBlock">
+        <span class="placeholder">Select...</span>
+      </ng-container>
+
+      <!-- TAGS BLOCK -->
+      <ng-template #tagsBlock>
+        <span class="tag" *ngFor="let v of value">
+          {{ labelFor(v) }}
+          <i class="bi bi-x tag-close" (click)="removeTag(v, $event)"></i>
+        </span>
+      </ng-template>
+
+    </div>
+
+    <i class="bi" [ngClass]="isOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+  </div>
+
+  <!-- DROPDOWN -->
+  <div class="dropdown-panel" *ngIf="isOpen" (click)="$event.stopPropagation()">
+
+    <!-- SEARCH -->
+    <input type="text"
+           class="search-input"
+           placeholder="Search..."
+           [(ngModel)]="searchTerm">
+
+    <!-- OPTIONS -->
+    <div class="options-wrapper">
+
+      <div class="option-row" *ngFor="let opt of filteredOptions()">
+        <label>
+          <input type="checkbox"
+                 [checked]="isChecked(opt[optionValue])"
+                 (change)="toggleValue(opt[optionValue])" />
+          <span>{{ opt[optionLabel] }}</span>
+        </label>
+      </div>
+
+      <div class="no-data" *ngIf="filteredOptions().length === 0">
+        No results found
+      </div>
+
+    </div>
+  </div>
+
+</div>

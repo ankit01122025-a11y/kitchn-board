@@ -1,0 +1,79 @@
+.item-wrapper {
+  padding: 20px;
+}
+
+.table {
+  background: #fff;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.action-buttons .btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1200;
+}
+
+.modal-box {
+  width: 450px;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, .3);
+  animation: popup .25s ease-out;
+}
+
+.modal-header,
+.modal-footer {
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-body {
+  padding: 15px;
+}
+
+.modal-footer {
+  border-top: 1px solid #eee;
+}
+
+.close {
+  background: transparent;
+  font-size: 22px;
+  border: none;
+  cursor: pointer;
+}
+
+@keyframes popup {
+  from {
+    transform: scale(.88);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

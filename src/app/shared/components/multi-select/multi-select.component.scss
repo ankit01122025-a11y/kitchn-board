@@ -1,0 +1,97 @@
+.multi-select-container {
+  width: 100%;
+  position: relative;
+  font-family: sans-serif;
+
+  .ms-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .select-box {
+    border: 1px solid #d1d5db;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    &:hover {
+      border-color: var(--primary);
+    }
+
+    .selected-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .placeholder {
+      color: #999;
+    }
+
+    .tag {
+      background: var(--primary-light);
+      color: white;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      .tag-close {
+        font-size: 14px;
+        cursor: pointer;
+      }
+    }
+  }
+
+  .dropdown-panel {
+    position: absolute;
+    width: 100%;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    margin-top: 4px;
+    padding: 10px;
+    z-index: 2000;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+
+    .search-input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-bottom: 8px;
+    }
+
+    .options-wrapper {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .option-row {
+      padding: 6px 4px;
+      border-bottom: 1px solid #f2f2f2;
+
+      label {
+        display: flex;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 10px;
+      color: #999;
+      font-size: 13px;
+    }
+  }
+}

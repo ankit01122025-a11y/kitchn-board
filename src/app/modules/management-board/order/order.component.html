@@ -1,0 +1,155 @@
+<div class="orders-wrapper">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="m-0">Orders</h4>
+    <button class="btn btn-primary btn-sm" (click)="openAddOrder()">
+      + Add Order
+    </button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped table-sm">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Items</th>
+          <th>Total</th>
+          <th>Status</th>
+          <th width="120" class="text-center">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let o of orders">
+          <td>{{ o.id }}</td>
+
+          <td>
+            <div *ngFor="let it of o.items">
+              {{ it.name }} ({{ it.qty }}) — ₹{{ it.total }}
+            </div>
+          </td>
+
+          <td><b>₹{{ getOrderTotal(o) }}</b></td>
+
+          <td>
+            <span class="badge" [ngClass]="{
+                'bg-secondary': o.status === 'PLACED',
+                'bg-warning': o.status === 'PREPARING',
+                'bg-info': o.status === 'READY',
+                'bg-success': o.status === 'SERVED'
+              }">
+              {{ o.status }}
+            </span>
+          </td>
+
+          <td class="text-center">
+            <button class="btn btn-warning btn-sm me-1 action-btn" (click)="openEditOrder(o)">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+            <button class="btn btn-danger btn-sm action-btn" (click)="openDeletePopup(o.id)">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="orders.length === 0">
+          <td colspan="5" class="text-center text-muted">No orders yet.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ADD / EDIT ORDER MODAL -->
+<div class="modal-overlay" *ngIf="showOrderModal">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h5>{{ isEdit ? 'Update Order' : 'Add Order' }}</h5>
+      <button class="close" (click)="closeOrderModal()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <form [formGroup]="form">
+
+        <div *ngIf="isEdit" class="mb-2">
+          <label class="fw-bold">Order Status</label>
+          <select class="form-select form-select-sm" formControlName="status">
+            <option value="PLACED">Placed</option>
+            <option value="PREPARING">Preparing</option>
+            <option value="READY">Ready</option>
+            <option value="SERVED">Served</option>
+          </select>
+        </div>
+
+        <!-- CATEGORY SELECT -->
+        <label class="fw-bold">Categories</label>
+        <app-multi-select formControlName="categoryIds" [options]="categories" optionLabel="name" optionValue="id"
+          (changed)="onCategoryChange($event)">
+        </app-multi-select>
+
+        <br>
+
+        <!-- ITEM SELECT -->
+        <label class="fw-bold">Items</label>
+        <app-multi-select formControlName="itemIds" [options]="filteredItems" optionLabel="name" optionValue="id"
+          (changed)="onItemChange($event)">
+        </app-multi-select>
+
+        <!-- ORDER ITEMS TABLE -->
+        <table class="table table-sm mt-3" *ngIf="orderItems.length">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th width="100">Qty</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let it of orderItems; let i = index">
+              <td>
+                <b>{{ it.name }}</b><br>
+                <small class="text-muted">{{ it.description }}</small>
+              </td>
+
+              <td>
+                <div class="qty-box">
+                  <button type="button" (click)="decreaseQty(i)">-</button>
+                  <span>{{ it.qty }}</span>
+                  <button type="button" (click)="increaseQty(i)">+</button>
+                </div>
+              </td>
+
+              <td>₹{{ it.total }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- TOTAL -->
+        <div class="order-total mt-3" *ngIf="orderItems.length">
+          <div class="d-flex justify-content-between total-box">
+            <span><b>Total</b></span>
+            <b class="text-success">₹{{ total }}</b>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" (click)="closeOrderModal()">Close</button>
+      <button class="btn btn-primary btn-sm" (click)="saveOrder()">
+        {{ isEdit ? 'Update Order' : 'Place Order' }}
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- DELETE POPUP -->
+<app-confirm-popup [show]="showDelete" title="Delete Order" message="Are you sure you want to delete this order?"
+  (confirm)="confirmDelete()" (cancel)="cancelDelete()">
+</app-confirm-popup>
