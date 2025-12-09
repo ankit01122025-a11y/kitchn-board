@@ -5,7 +5,6 @@ import { Category } from '../../../core/models/category.model';
 import { CategoryService } from '../../../core/services/category/category.service';
 import { ConfirmPopupComponent } from '../../../shared/components/confirm-popup/confirm-popup.component';
 import { ItemService } from '../../../core/services/item/item.service';
-import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-category',
@@ -33,8 +32,7 @@ export class CategoryComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private categoryService: CategoryService,
-    private itemService: ItemService,
-    private toast: ToastService
+    private itemService: ItemService
   ) { }
 
   ngOnInit(): void {
@@ -52,20 +50,17 @@ export class CategoryComponent implements OnInit {
     });
   }
 
-  openAddModal(): void {
+  openAddModal() {
     this.isEdit = false;
     this.editId = 0;
     this.form.reset();
     this.openModal();
   }
 
-  openEditModal(cat: Category): void {
+  openEditModal(cat: any) {
     this.isEdit = true;
     this.editId = cat.id;
-    this.form.patchValue({
-      name: cat.name,
-      description: cat.description
-    });
+    this.form.patchValue(cat);
     this.openModal();
   }
 
@@ -74,60 +69,53 @@ export class CategoryComponent implements OnInit {
 
     const value = this.form.value;
 
+    const payload = {
+      id: this.isEdit ? this.editId : Date.now(),
+      ...value,
+      createdAt: new Date().toISOString()
+    };
+
     if (this.isEdit) {
-      // UPDATE
-      const updated: Category = {
-        id: this.editId,
-        name: value.name,
-        description: value.description,
-        createdAt: new Date().toISOString()
-      };
-
-      this.categoryService.updateCategory(updated);
-
+      this.categoryService.update(payload).subscribe(res => {
+        if (res.success) this.closeModal();
+      });
     } else {
-      // CREATE
-      const newCategory: Category = {
-        id: Date.now(),
-        name: value.name,
-        description: value.description,
-        createdAt: new Date().toISOString()
-      };
-
-      this.categoryService.addCategory(newCategory);
+      this.categoryService.add(payload).subscribe(res => {
+        if (res.success) this.closeModal();
+      });
     }
-
-    this.closeModal();
   }
 
-  openDeleteConfirm(id: number): void {
+  openDeleteConfirm(id: number) {
+    const used = this.itemService.getItemsByCategory(id);
+
+    if (used.length > 0) {
+      alert(
+        'This category is used in items:\n' +
+        used.map(i => '- ' + i.name).join('\n')
+      );
+      return;
+    }
+
     this.deleteId = id;
-    const usedItems = this.itemService.getItemsByCategory(id);
-
-    if (usedItems.length > 0) {
-      let ErrorMessage;
-      ErrorMessage = 'This category is used in the following items:\n\n' +
-        usedItems.map(i => '• ' + i.name).join('\n') + ' ' + 'Cannot Delete Category.'
-      this.toast.error(ErrorMessage);
-    } else {
-      this.showDeletePopup = true;
-    }
+    this.showDeletePopup = true;
   }
 
-  confirmDelete(): void {
-    this.categoryService.deleteCategory(this.deleteId);
+  confirmDelete() {
+    this.categoryService.delete(this.deleteId).subscribe(res => {
+      if (res.success) this.showDeletePopup = false;
+    });
+  }
+
+  cancelDelete() {
     this.showDeletePopup = false;
   }
 
-  cancelDelete(): void {
-    this.showDeletePopup = false;
-  }
-
-  openModal(): void {
+  openModal() {
     document.getElementById('categoryModal')?.classList.add('show');
   }
 
-  closeModal(): void {
+  closeModal() {
     document.getElementById('categoryModal')?.classList.remove('show');
   }
 }

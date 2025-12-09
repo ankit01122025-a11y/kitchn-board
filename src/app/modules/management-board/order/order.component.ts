@@ -12,6 +12,7 @@ import { OrderService } from '../../../core/services/order/order.service';
 
 import { MultiSelectComponent } from '../../../shared/components/multi-select/multi-select.component';
 import { ConfirmPopupComponent } from '../../../shared/components/confirm-popup/confirm-popup.component';
+import { getOrderTotal } from '../../../shared/utils/common.util';
 
 @Component({
   selector: 'app-order',
@@ -44,6 +45,8 @@ export class OrderComponent {
 
   showDelete = false;
   deleteId: number | null = null;
+
+  getOrderTotal = getOrderTotal;
 
   constructor(
     private fb: FormBuilder,
@@ -225,9 +228,5 @@ export class OrderComponent {
 
   cancelDelete() {
     this.showDelete = false;
-  }
-
-  getOrderTotal(o: Order) {
-    return o.items.reduce((s, x) => s + x.total, 0);
   }
 }

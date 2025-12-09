@@ -1,0 +1,21 @@
+<div class="board-card">
+    <h5 class="header" [ngClass]="color">{{ title }}</h5>
+
+    <div *ngIf="orders.length === 0" class="empty">
+        No orders
+    </div>
+
+    <div class="order-box" *ngFor="let o of orders">
+        <div class="order-id">#{{ o.id }}</div>
+
+        <div class="order-items">
+            <div *ngFor="let it of o.items">
+                {{ it.name }} ({{ it.qty }})
+            </div>
+        </div>
+
+        <div class="order-time">⏱ {{ formatTime(o.autoTime || 0) }}</div>
+
+        <div class="order-total">₹{{ getOrderTotal(o) }}</div>
+    </div>
+</div>
