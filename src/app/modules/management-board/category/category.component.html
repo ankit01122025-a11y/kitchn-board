@@ -1,15 +1,10 @@
 <div class="category-wrapper">
-
-  <!-- HEADER -->
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="m-0">Categories</h4>
-
     <button class="btn btn-primary btn-sm" (click)="openAddModal()">
       + Add Category
     </button>
   </div>
-
-  <!-- TABLE -->
   <div class="table-responsive">
     <table class="table table-bordered table-striped table-sm">
       <thead class="thead-dark">
@@ -20,7 +15,6 @@
           <th width="100">Actions</th>
         </tr>
       </thead>
-
       <tbody>
         <tr *ngFor="let c of categories; index as i">
           <td>{{ i + 1 }}</td>
@@ -36,57 +30,50 @@
             </button>
           </td>
         </tr>
-
         <tr *ngIf="categories.length === 0">
-          <td colspan="4" class="text-center text-muted">No categories available.</td>
+          <td colspan="4" class="text-center text-muted">
+            No categories available.
+          </td>
         </tr>
       </tbody>
     </table>
   </div>
 </div>
-
-<!-- ADD / EDIT MODAL -->
 <div id="categoryModal" class="modal-overlay" (click)="closeModal()">
   <div class="modal-box" (click)="$event.stopPropagation()">
-
     <div class="modal-header">
-      <h5 class="modal-title">{{ isEdit ? 'Update Category' : 'Add Category' }}</h5>
+      <h5 class="modal-title">
+        {{ categoryForm.get('id')?.value ? 'Update Category' : 'Add Category' }}
+      </h5>
       <button class="close" (click)="closeModal()">&times;</button>
     </div>
-
     <div class="modal-body">
-      <form [formGroup]="form">
-
+      <form [formGroup]="categoryForm">
         <div class="form-group">
           <label>Name</label>
-          <input class="form-control" formControlName="name">
-          <small class="text-danger" *ngIf="form.get('name')?.touched && form.get('name')?.invalid">
+          <input class="form-control" formControlName="name" />
+          <small class="text-danger" *ngIf="categoryForm.get('name')?.touched && categoryForm.get('name')?.invalid">
             Required (max 7 chars)
           </small>
         </div>
-
         <div class="form-group">
           <label>Description</label>
           <textarea rows="3" class="form-control" formControlName="description"></textarea>
-          <small class="text-danger" *ngIf="form.get('description')?.touched && form.get('description')?.invalid">
+          <small class="text-danger"
+            *ngIf="categoryForm.get('description')?.touched && categoryForm.get('description')?.invalid">
             Required (max 9 chars)
           </small>
         </div>
-
       </form>
     </div>
-
     <div class="modal-footer">
       <button class="btn btn-secondary btn-sm" (click)="closeModal()">Close</button>
-      <button class="btn btn-primary btn-sm" [disabled]="form.invalid" (click)="saveCategory()">
-        {{ isEdit ? 'Update' : 'Save' }}
+      <button class="btn btn-primary btn-sm" [disabled]="categoryForm.invalid" (click)="saveCategory()">
+        {{ categoryForm.get('id')?.value ? 'Update' : 'Save' }}
       </button>
     </div>
-
   </div>
 </div>
-
-<!-- DELETE CONFIRM POPUP -->
 <app-confirm-popup [show]="showDeletePopup" title="Delete Category"
   message="Are you sure you want to delete this category?" (confirm)="confirmDelete()" (cancel)="cancelDelete()">
 </app-confirm-popup>

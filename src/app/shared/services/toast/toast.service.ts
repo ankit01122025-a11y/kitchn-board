@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ToastComponent } from '../components/toast/toast.component';
+import { ToastComponent } from '../../components/toast/toast.component';
 
 @Injectable({
   providedIn: 'root'

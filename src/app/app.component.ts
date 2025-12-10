@@ -2,7 +2,8 @@ import { AfterViewInit, Component, ViewChild } from '@angular/core';
 import { ChefBoardComponent } from './modules/chef-board/chef-board.component';
 import { ManagementBoardComponent } from './modules/management-board/management-board.component';
 import { ToastComponent } from './shared/components/toast/toast.component';
-import { ToastService } from './shared/services/toast.service';
+import { ToastService } from './shared/services/toast/toast.service';
+import { LoaderComponent } from './shared/components/loader/loader.component';
 
 @Component({
   selector: 'app-root',
@@ -10,7 +11,8 @@ import { ToastService } from './shared/services/toast.service';
   imports: [
     ManagementBoardComponent,
     ChefBoardComponent,
-    ToastComponent
+    ToastComponent,
+    LoaderComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'

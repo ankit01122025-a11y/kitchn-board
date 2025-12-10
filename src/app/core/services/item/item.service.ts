@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ToastService } from '../../../shared/services/toast.service';
+import { ToastService } from '../../../shared/services/toast/toast.service';
 import { Item } from '../../models/item.model';
 import { LocalStorageService } from '../local-storage/local-storage.service';
 import { BehaviorSubject } from 'rxjs';

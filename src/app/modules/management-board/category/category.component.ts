@@ -1,99 +1,94 @@
 import { Component, OnInit } from '@angular/core';
-import { ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { NgIf, NgFor } from '@angular/common';
-import { Category } from '../../../core/models/category.model';
-import { CategoryService } from '../../../core/services/category/category.service';
 import { ConfirmPopupComponent } from '../../../shared/components/confirm-popup/confirm-popup.component';
+import { CategoryService } from '../../../core/services/category/category.service';
 import { ItemService } from '../../../core/services/item/item.service';
+import { LoaderService } from '../../../shared/services/loader/loader.service';
+import { ToastService } from '../../../shared/services/toast/toast.service';
 
 @Component({
   selector: 'app-category',
   standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    NgIf,
-    NgFor,
-    ConfirmPopupComponent
-  ],
+  imports: [ReactiveFormsModule, NgIf, NgFor, ConfirmPopupComponent],
   templateUrl: './category.component.html',
   styleUrls: ['./category.component.scss']
 })
 export class CategoryComponent implements OnInit {
-
-  categories: Category[] = [];
-  form!: FormGroup;
-
-  isEdit = false;
-  editId = 0;
-
+  categories: any[] = [];
+  categoryForm!: FormGroup;
   showDeletePopup = false;
   deleteId = 0;
 
   constructor(
     private fb: FormBuilder,
     private categoryService: CategoryService,
-    private itemService: ItemService
+    private itemService: ItemService,
+    private toast: ToastService,
+    public loader: LoaderService
   ) { }
 
   ngOnInit(): void {
-    this.createForm();
+    this.initForm();
 
     this.categoryService.categorySubject$.subscribe(list => {
       this.categories = list;
     });
   }
 
-  createForm(): void {
-    this.form = this.fb.group({
+  private initForm() {
+    this.categoryForm = this.fb.group({
+      id: null,
       name: ['', [Validators.required, Validators.maxLength(7)]],
-      description: ['', [Validators.required, Validators.maxLength(9)]]
+      description: ['', [Validators.required, Validators.maxLength(9)]],
     });
   }
 
   openAddModal() {
-    this.isEdit = false;
-    this.editId = 0;
-    this.form.reset();
+    this.categoryForm.reset();
     this.openModal();
   }
 
   openEditModal(cat: any) {
-    this.isEdit = true;
-    this.editId = cat.id;
-    this.form.patchValue(cat);
+    this.categoryForm.patchValue(cat);
     this.openModal();
   }
 
-  saveCategory(): void {
-    if (this.form.invalid) return;
-
-    const value = this.form.value;
+  saveCategory() {
+    if (this.categoryForm.invalid) return;
 
     const payload = {
-      id: this.isEdit ? this.editId : Date.now(),
-      ...value,
+      ...this.categoryForm.value,
+      id: this.categoryForm.value.id ?? Date.now(),
       createdAt: new Date().toISOString()
     };
 
-    if (this.isEdit) {
-      this.categoryService.update(payload).subscribe(res => {
-        if (res.success) this.closeModal();
-      });
-    } else {
-      this.categoryService.add(payload).subscribe(res => {
-        if (res.success) this.closeModal();
-      });
-    }
+    this.loader.show();
+
+    const req$ = payload.id
+      ? this.categoryService.update(payload)
+      : this.categoryService.add(payload);
+
+    req$.subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message);
+          this.closeModal();
+        }
+        this.loader.hide();
+      },
+      error: () => {
+        this.toast.error("Operation failed.");
+        this.loader.hide();
+      }
+    });
   }
 
   openDeleteConfirm(id: number) {
     const used = this.itemService.getItemsByCategory(id);
 
     if (used.length > 0) {
-      alert(
-        'This category is used in items:\n' +
-        used.map(i => '- ' + i.name).join('\n')
-      );
+      this.toast.error("This category is used in items.");
       return;
     }
 
@@ -102,8 +97,20 @@ export class CategoryComponent implements OnInit {
   }
 
   confirmDelete() {
-    this.categoryService.delete(this.deleteId).subscribe(res => {
-      if (res.success) this.showDeletePopup = false;
+    this.loader.show();
+
+    this.categoryService.delete(this.deleteId).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message);
+          this.showDeletePopup = false;
+        }
+        this.loader.hide();
+      },
+      error: () => {
+        this.toast.error("Delete failed.");
+        this.loader.hide();
+      }
     });
   }
 
@@ -111,7 +118,7 @@ export class CategoryComponent implements OnInit {
     this.showDeletePopup = false;
   }
 
-  openModal() {
+  private openModal() {
     document.getElementById('categoryModal')?.classList.add('show');
   }
 

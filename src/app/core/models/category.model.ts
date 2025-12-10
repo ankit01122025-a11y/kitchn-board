@@ -5,3 +5,9 @@ export interface Category {
     description: string;
     createdAt: string;
 }
+
+export interface CategoryResponse {
+    success: boolean;
+    message: string;
+    data?: Category;
+}

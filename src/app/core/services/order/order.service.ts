@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Order } from '../../models/order.model';
 import { BehaviorSubject } from 'rxjs';
-import { ToastService } from '../../../shared/services/toast.service';
+import { ToastService } from '../../../shared/services/toast/toast.service';
 
 @Injectable({
   providedIn: 'root'
