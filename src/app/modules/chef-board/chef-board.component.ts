@@ -1,8 +1,10 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
 import { interval, Subscription } from 'rxjs';
+
 import { Order } from '../../core/models/order.model';
 import { OrderService } from '../../core/services/order/order.service';
+import { ToastService } from '../../shared/services/toast/toast.service';
 import { OrderStatusColumnComponent } from './order-status-column/order-status-column.component';
 
 @Component({
@@ -13,28 +15,28 @@ import { OrderStatusColumnComponent } from './order-status-column/order-status-c
   styleUrls: ['./chef-board.component.scss']
 })
 export class ChefBoardComponent implements OnInit, OnDestroy {
-
   orders: Order[] = [];
-
   placed: Order[] = [];
   preparing: Order[] = [];
   ready: Order[] = [];
   served: Order[] = [];
 
-  timerSub!: Subscription;
-  orderSub!: Subscription;
+  private timerSub!: Subscription;
+  private orderSub!: Subscription;
 
-  constructor(private orderService: OrderService) { }
+  constructor(
+    private orderService: OrderService,
+    private toast: ToastService
+  ) {}
 
   ngOnInit(): void {
     this.loadOrders();
 
-    // Listen for manual updates
     this.orderSub = this.orderService.orderSubject$.subscribe(() => {
       this.loadOrders();
     });
 
-    // Timer runs every 1 second
+
     this.timerSub = interval(1000).subscribe(() => {
       this.incrementTimers();
       this.autoMoveStatus();
@@ -46,11 +48,10 @@ export class ChefBoardComponent implements OnInit, OnDestroy {
     this.orderSub?.unsubscribe();
   }
 
-  // Load & split orders by status
-  loadOrders() {
-    this.orders = this.orderService.orders;
 
-    // runtime-only timer
+  loadOrders() {
+    this.orders = this.orderService.orderSubject$.value || [];
+
     this.orders.forEach(o => {
       if (o.autoTime == null) o.autoTime = 0;
     });
@@ -61,7 +62,6 @@ export class ChefBoardComponent implements OnInit, OnDestroy {
     this.served = this.orders.filter(o => o.status === 'SERVED');
   }
 
-  // UI-only seconds counter
   incrementTimers() {
     this.orders.forEach(o => {
       if (o.status !== 'SERVED') {
@@ -70,7 +70,6 @@ export class ChefBoardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Auto move orders based on timer
   autoMoveStatus() {
     let changed = false;
 
@@ -98,11 +97,20 @@ export class ChefBoardComponent implements OnInit, OnDestroy {
 
     });
 
-    // Save only if something changed
     if (changed) {
-      this.orderService.updateOrders(this.orders);
-      this.loadOrders();
+      this.orderService.updateOrders(this.orders).subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.loadOrders();
+            this.toast.success(res.message || 'Orders updated');
+          } else {
+            console.error('Auto update failed:', res.message);
+          }
+        },
+        error: (err) => {
+          console.error('Auto update error:', err);
+        }
+      });
     }
   }
-
 }

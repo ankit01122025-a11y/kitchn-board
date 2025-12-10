@@ -1,75 +1,72 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormGroup, FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { NgIf, NgFor, NgClass } from '@angular/common';
-
+import { Subscription } from 'rxjs';
 import { Category } from '../../../core/models/category.model';
 import { Item } from '../../../core/models/item.model';
 import { Order, OrderItem } from '../../../core/models/order.model';
-
 import { CategoryService } from '../../../core/services/category/category.service';
 import { ItemService } from '../../../core/services/item/item.service';
 import { OrderService } from '../../../core/services/order/order.service';
-
 import { MultiSelectComponent } from '../../../shared/components/multi-select/multi-select.component';
 import { ConfirmPopupComponent } from '../../../shared/components/confirm-popup/confirm-popup.component';
 import { getOrderTotal } from '../../../shared/utils/common.util';
+import { LoaderService } from '../../../shared/services/loader/loader.service';
+import { ToastService } from '../../../shared/services/toast/toast.service';
+import { NgIf, NgFor, NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-order',
   standalone: true,
   imports: [
-    NgIf,
-    NgFor,
-    NgClass,
+    NgIf, NgFor, NgClass,
     ReactiveFormsModule,
     MultiSelectComponent,
     ConfirmPopupComponent
   ],
   templateUrl: './order.component.html',
-  styleUrl: './order.component.scss'
+  styleUrls: ['./order.component.scss']
 })
-export class OrderComponent {
-
-  form!: FormGroup;
-
+export class OrderComponent implements OnInit, OnDestroy {
+  orderForm!: FormGroup;
   categories: Category[] = [];
   allItems: Item[] = [];
   filteredItems: Item[] = [];
   orders: Order[] = [];
-
-  showOrderModal = false;
-  isEdit = false;
-  editOrderId: number | null = null;
-
-  total = 0;
-
   showDelete = false;
   deleteId: number | null = null;
-
+  total = 0;
   getOrderTotal = getOrderTotal;
+
+  private subs: Subscription[] = [];
 
   constructor(
     private fb: FormBuilder,
     private categoryService: CategoryService,
     private itemService: ItemService,
-    private orderService: OrderService
+    private orderService: OrderService,
+    public loader: LoaderService,
+    private toast: ToastService
   ) { }
 
   ngOnInit(): void {
-    this.loadAll();
     this.initForm();
 
-    this.categoryService.categorySubject$.subscribe(list => {
-      this.categories = list;
-    });
+    this.subs.push(this.categoryService.categorySubject$.subscribe(list => this.categories = list));
+    this.subs.push(this.itemService.itemSubject$.subscribe(list => this.allItems = list));
+    this.subs.push(this.orderService.orderSubject$.subscribe(list => this.orders = list));
 
-    this.itemService.itemSubject$.subscribe(list => {
-      this.allItems = list;
-    });
+    this.categories = this.categoryService.categorySubject$.value;
+    this.allItems = this.itemService.itemSubject$.value;
+    this.orders = this.orderService.orderSubject$.value;
   }
 
-  initForm() {
-    this.form = this.fb.group({
+  ngOnDestroy(): void {
+    this.subs.forEach(s => s.unsubscribe());
+  }
+
+  initForm(): void {
+    this.orderForm = this.fb.group({
+      id: null,
       categoryIds: [[]],
       itemIds: [[]],
       orderItems: [[]],
@@ -78,35 +75,22 @@ export class OrderComponent {
   }
 
   get orderItems(): OrderItem[] {
-    return this.form.get('orderItems')?.value || [];
-  }
-
-  loadAll() {
-    this.orders = this.orderService.orders;
+    return this.orderForm.get('orderItems')?.value || [];
   }
 
   openAddOrder() {
-    this.isEdit = false;
-    this.editOrderId = null;
-
-    this.form.setValue({
-      categoryIds: [],
-      itemIds: [],
-      orderItems: [],
-      status: 'PLACED'
-    });
-
-    this.total = 0;
+    this.orderForm.reset();
     this.filteredItems = [];
-    this.showOrderModal = true;
+    this.total = 0;
+    this.openModal();
   }
 
   openEditOrder(order: Order) {
-    this.isEdit = true;
-    this.editOrderId = order.id;
-
-    this.form.patchValue({
+    this.orderForm.patchValue({
+      id: order.id,
       categoryIds: [...order.categoryIds],
+      itemIds: order.items.map(it => it.itemId),
+      orderItems: JSON.parse(JSON.stringify(order.items)),
       status: order.status
     });
 
@@ -114,23 +98,14 @@ export class OrderComponent {
       it.categoryIds.some(cid => order.categoryIds.includes(cid))
     );
 
-    this.form.patchValue({
-      itemIds: order.items.map(it => it.itemId),
-      orderItems: JSON.parse(JSON.stringify(order.items))
-    });
-
     this.updateTotal();
-    this.showOrderModal = true;
-  }
-
-  closeOrderModal() {
-    this.showOrderModal = false;
+    this.openModal();
   }
 
   onCategoryChange(ids: number[]) {
     if (!ids.length) {
       this.filteredItems = [];
-      this.form.patchValue({ itemIds: [], orderItems: [] });
+      this.orderForm.patchValue({ itemIds: [], orderItems: [] });
       this.updateTotal();
       return;
     }
@@ -142,7 +117,7 @@ export class OrderComponent {
 
   onItemChange(ids: number[]) {
     if (!ids.length) {
-      this.form.patchValue({ orderItems: [] });
+      this.orderForm.patchValue({ orderItems: [] });
       this.updateTotal();
       return;
     }
@@ -159,24 +134,24 @@ export class OrderComponent {
       };
     });
 
-    this.form.patchValue({ orderItems: items });
+    this.orderForm.patchValue({ orderItems: items });
     this.updateTotal();
   }
 
-  increaseQty(index: number) {
+  increaseQty(i: number) {
     const items = [...this.orderItems];
-    items[index].qty++;
-    items[index].total = items[index].qty * items[index].price;
-    this.form.patchValue({ orderItems: items });
+    items[i].qty++;
+    items[i].total = items[i].qty * items[i].price;
+    this.orderForm.patchValue({ orderItems: items });
     this.updateTotal();
   }
 
-  decreaseQty(index: number) {
+  decreaseQty(i: number) {
     const items = [...this.orderItems];
-    if (items[index].qty > 1) {
-      items[index].qty--;
-      items[index].total = items[index].qty * items[index].price;
-      this.form.patchValue({ orderItems: items });
+    if (items[i].qty > 1) {
+      items[i].qty--;
+      items[i].total = items[i].qty * items[i].price;
+      this.orderForm.patchValue({ orderItems: items });
       this.updateTotal();
     }
   }
@@ -186,31 +161,43 @@ export class OrderComponent {
   }
 
   saveOrder() {
-    const f = this.form.value;
-    if (!f.orderItems.length) return;
+    const f = this.orderForm.value;
 
-    if (this.isEdit) {
-      const updated: Order = {
-        id: this.editOrderId!,
-        categoryIds: f.categoryIds,
-        items: f.orderItems,
-        status: f.status,
-        createdAt: new Date().toISOString()
-      };
-      this.orderService.updateOrder(updated);
-    } else {
-      const newOrder: Order = {
-        id: Date.now(),
-        categoryIds: f.categoryIds,
-        items: f.orderItems,
-        status: 'PLACED',
-        createdAt: new Date().toISOString()
-      };
-      this.orderService.addOrder(newOrder);
+    if (!f.orderItems.length) {
+      this.toast.error("Please select items.");
+      return;
     }
 
-    this.showOrderModal = false;
-    this.loadAll();
+    const payload: Order = {
+      id: f.id ?? Date.now(),
+      categoryIds: f.categoryIds,
+      items: f.orderItems,
+      status: f.status,
+      createdAt: new Date().toISOString(),
+      autoTime: 0
+    };
+
+    this.loader.show();
+
+    const req$ = f.id
+      ? this.orderService.update(payload)
+      : this.orderService.add(payload);
+
+    req$.subscribe({
+      next: res => {
+        if (res.success) {
+          this.toast.success(res.message);
+          this.closeModal();
+        } else {
+          this.toast.error(res.message);
+        }
+        this.loader.hide();
+      },
+      error: () => {
+        this.toast.error("Operation failed.");
+        this.loader.hide();
+      }
+    });
   }
 
   openDeletePopup(id: number) {
@@ -219,14 +206,35 @@ export class OrderComponent {
   }
 
   confirmDelete() {
-    if (this.deleteId !== null) {
-      this.orderService.deleteOrder(this.deleteId);
-      this.loadAll();
-    }
-    this.showDelete = false;
+    if (!this.deleteId) return;
+
+    this.loader.show();
+    this.orderService.delete(this.deleteId).subscribe({
+      next: res => {
+        if (res.success) {
+          this.toast.success(res.message);
+        } else {
+          this.toast.error(res.message);
+        }
+        this.showDelete = false;
+        this.loader.hide();
+      },
+      error: () => {
+        this.toast.error("Delete failed.");
+        this.loader.hide();
+      }
+    });
   }
 
   cancelDelete() {
     this.showDelete = false;
+  }
+
+  private openModal() {
+    document.getElementById('orderModal')?.classList.add('show');
+  }
+
+   closeModal() {
+    document.getElementById('orderModal')?.classList.remove('show');
   }
 }
