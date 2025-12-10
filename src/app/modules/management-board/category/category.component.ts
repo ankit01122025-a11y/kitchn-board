@@ -66,7 +66,7 @@ export class CategoryComponent implements OnInit {
 
     this.loader.show();
 
-    const req$ = payload.id
+    const req$ = this.categoryForm.value.id
       ? this.categoryService.update(payload)
       : this.categoryService.add(payload);
 
