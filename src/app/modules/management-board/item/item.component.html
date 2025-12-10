@@ -1,15 +1,10 @@
 <div class="item-wrapper">
-
-  <!-- HEADER -->
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="m-0">Items</h4>
-
     <button class="btn btn-primary btn-sm" (click)="openAddModal()">
       + Add Item
     </button>
   </div>
-
-  <!-- TABLE -->
   <div class="table-responsive">
     <table class="table table-bordered table-striped table-sm">
       <thead class="thead-dark">
@@ -21,25 +16,21 @@
           <th width="120">Actions</th>
         </tr>
       </thead>
-
       <tbody>
         <tr *ngFor="let i of items">
           <td>{{ i.name }}</td>
           <td>{{ i.description || '-' }}</td>
           <td>{{ getCategoryNames(i.categoryIds) }}</td>
           <td>{{ i.price | currency:'INR' }}</td>
-
           <td class="action-buttons">
             <button class="btn btn-warning btn-sm" (click)="openEditModal(i)">
               <i class="bi bi-pencil-square"></i>
             </button>
-
             <button class="btn btn-danger btn-sm" (click)="openDeleteConfirm(i.id)">
               <i class="bi bi-trash"></i>
             </button>
           </td>
         </tr>
-
         <tr *ngIf="items.length === 0">
           <td colspan="5" class="text-center text-muted">
             No items available.
@@ -49,57 +40,44 @@
     </table>
   </div>
 </div>
-
-
-
-<!-- ADD / EDIT MODAL -->
-<div class="modal-overlay" *ngIf="showModal">
-  <div class="modal-box">
-
+<div id="itemModal" class="modal-overlay" (click)="closeModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h5>{{ isEdit ? 'Update Item' : 'Add Item' }}</h5>
-      <button class="close" (click)="showModal = false">&times;</button>
+      <h5>{{ itemForm.get('id')?.value ? 'Update Item' : 'Add Item' }}</h5>
+      <button class="close" (click)="closeModal()">&times;</button>
     </div>
-
     <div class="modal-body">
-      <form [formGroup]="form">
-
+      <form [formGroup]="itemForm">
         <div class="form-group">
           <label>Name</label>
           <input class="form-control" formControlName="name">
+          <small class="text-danger" *ngIf="itemForm.get('name')?.touched && itemForm.get('name')?.invalid">
+            Required (max 20 chars)
+          </small>
         </div>
-
         <div class="form-group">
           <label>Description</label>
           <textarea rows="3" class="form-control" formControlName="description"></textarea>
         </div>
-
         <div class="form-group">
           <label>Price</label>
           <input type="number" class="form-control" formControlName="price">
         </div>
-
         <div class="form-group">
           <label>Categories</label>
-
-          <app-multi-select [options]="categories" optionLabel="name" optionValue="id" formControlName="categoryIds">
-          </app-multi-select>
-
+          <app-multi-select [options]="categories" optionLabel="name" optionValue="id"
+            formControlName="categoryIds"></app-multi-select>
         </div>
-
       </form>
     </div>
-
     <div class="modal-footer">
-      <button class="btn btn-secondary btn-sm" (click)="showModal = false">Close</button>
-      <button class="btn btn-primary btn-sm" (click)="saveItem()">Save</button>
+      <button class="btn btn-secondary btn-sm" (click)="closeModal()">Close</button>
+      <button class="btn btn-primary btn-sm" [disabled]="itemForm.invalid" (click)="saveItem()">
+        {{ itemForm.get('id')?.value ? 'Update' : 'Save' }}
+      </button>
     </div>
-
   </div>
 </div>
-
-
-<!-- DELETE CONFIRM -->
-<app-confirm-popup [show]="showDelete" title="Delete Item" message="Are you sure you want to delete this item?"
+<app-confirm-popup [show]="showDeletePopup" title="Delete Item" message="Are you sure you want to delete this item?"
   (confirm)="confirmDelete()" (cancel)="cancelDelete()">
 </app-confirm-popup>

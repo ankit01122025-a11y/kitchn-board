@@ -6,6 +6,7 @@ import { CategoryService } from '../../../core/services/category/category.servic
 import { ItemService } from '../../../core/services/item/item.service';
 import { LoaderService } from '../../../shared/services/loader/loader.service';
 import { ToastService } from '../../../shared/services/toast/toast.service';
+import { Category } from '../../../core/models/category.model';
 
 @Component({
   selector: 'app-category',
@@ -15,7 +16,7 @@ import { ToastService } from '../../../shared/services/toast/toast.service';
   styleUrls: ['./category.component.scss']
 })
 export class CategoryComponent implements OnInit {
-  categories: any[] = [];
+  categories: Category[] = [];
   categoryForm!: FormGroup;
   showDeletePopup = false;
   deleteId = 0;

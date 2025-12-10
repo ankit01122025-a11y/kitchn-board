@@ -1,14 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { NgFor, NgIf, CurrencyPipe } from '@angular/common';
-
-import { Item } from '../../../core/models/item.model';
-import { Category } from '../../../core/models/category.model';
+import { NgIf, NgFor, CurrencyPipe } from '@angular/common';
 import { ItemService } from '../../../core/services/item/item.service';
 import { CategoryService } from '../../../core/services/category/category.service';
-
+import { LoaderService } from '../../../shared/services/loader/loader.service';
+import { ToastService } from '../../../shared/services/toast/toast.service';
 import { MultiSelectComponent } from '../../../shared/components/multi-select/multi-select.component';
 import { ConfirmPopupComponent } from '../../../shared/components/confirm-popup/confirm-popup.component';
+import { Item } from '../../../core/models/item.model';
+import { Category } from '../../../core/models/category.model';
 
 @Component({
   selector: 'app-item',
@@ -25,26 +25,22 @@ import { ConfirmPopupComponent } from '../../../shared/components/confirm-popup/
   styleUrls: ['./item.component.scss']
 })
 export class ItemComponent implements OnInit {
-
   items: Item[] = [];
   categories: Category[] = [];
-
-  form!: FormGroup;
-
-  showModal = false;
-  showDelete = false;
-  deleteId: number | null = null;
-
-  isEdit = false;
+  itemForm!: FormGroup;
+  showDeletePopup = false;
+  deleteId = 0;
 
   constructor(
     private fb: FormBuilder,
     private itemService: ItemService,
-    private categoryService: CategoryService
+    private categoryService: CategoryService,
+    private loader: LoaderService,
+    private toast: ToastService
   ) { }
 
   ngOnInit(): void {
-    this.createForm();
+    this.initForm();
 
     this.categoryService.categorySubject$.subscribe(list => {
       this.categories = list;
@@ -55,9 +51,9 @@ export class ItemComponent implements OnInit {
     });
   }
 
-  createForm() {
-    this.form = this.fb.group({
-      id: [0],
+  private initForm() {
+    this.itemForm = this.fb.group({
+      id: null,
       name: ['', [Validators.required, Validators.maxLength(20)]],
       description: ['', Validators.maxLength(50)],
       price: [0, Validators.required],
@@ -65,75 +61,85 @@ export class ItemComponent implements OnInit {
     });
   }
 
-  // OPEN ADD MODAL
   openAddModal() {
-    this.isEdit = false;
-    this.form.reset({
-      id: 0,
-      name: '',
-      description: '',
-      price: 0,
-      categoryIds: []
-    });
-    this.showModal = true;
+    this.itemForm.reset();
+    this.openModal();
   }
 
-  // EDIT MODAL
-  openEditModal(item: Item) {
-    this.isEdit = true;
-
-    this.form.patchValue({
-      id: item.id,
-      name: item.name,
-      description: item.description,
-      price: item.price,
-      categoryIds: [...item.categoryIds]
-    });
-
-    this.showModal = true;
+  openEditModal(item: any) {
+    this.itemForm.patchValue(item);
+    this.openModal();
   }
 
-  // SAVE ITEM
   saveItem() {
-    if (this.form.invalid) return;
+    if (this.itemForm.invalid) return;
 
-    const data: Item = {
-      ...this.form.value,
+    const payload = {
+      ...this.itemForm.value,
+      id: this.itemForm.value.id ?? Date.now(),
       createdAt: new Date().toISOString()
     };
 
-    if (this.isEdit) {
-      this.itemService.updateItem(data);
-    } else {
-      data.id = Date.now();
-      this.itemService.addItem(data);
-    }
+    this.loader.show();
 
-    this.showModal = false;
+    const req$ = this.itemForm.value.id
+      ? this.itemService.update(payload)
+      : this.itemService.add(payload);
+
+    req$.subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message);
+          this.closeModal();
+        }
+        this.loader.hide();
+      },
+      error: () => {
+        this.toast.error("Operation failed.");
+        this.loader.hide();
+      }
+    });
   }
 
-  // DELETE CONFIRM POPUP
   openDeleteConfirm(id: number) {
     this.deleteId = id;
-    this.showDelete = true;
+    this.showDeletePopup = true;
   }
 
   confirmDelete() {
-    if (this.deleteId !== null) {
-      this.itemService.deleteItem(this.deleteId);
-    }
-    this.showDelete = false;
+    this.loader.show();
+
+    this.itemService.delete(this.deleteId).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.toast.success(res.message);
+          this.showDeletePopup = false;
+        }
+        this.loader.hide();
+      },
+      error: () => {
+        this.toast.error("Delete failed.");
+        this.loader.hide();
+      }
+    });
   }
 
   cancelDelete() {
-    this.showDelete = false;
+    this.showDeletePopup = false;
   }
 
-  // DISPLAY CATEGORY NAMES
   getCategoryNames(ids: number[]): string {
     return this.categories
       .filter(c => ids.includes(c.id))
       .map(c => c.name)
       .join(', ');
+  }
+
+  private openModal() {
+    document.getElementById('itemModal')?.classList.add('show');
+  }
+
+  closeModal() {
+    document.getElementById('itemModal')?.classList.remove('show');
   }
 }

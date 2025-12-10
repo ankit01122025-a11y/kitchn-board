@@ -1,62 +1,72 @@
 import { Injectable } from '@angular/core';
-import { ToastService } from '../../../shared/services/toast/toast.service';
-import { Item } from '../../models/item.model';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
+import { delay, map, catchError } from 'rxjs/operators';
 import { LocalStorageService } from '../local-storage/local-storage.service';
-import { BehaviorSubject } from 'rxjs';
+import { Item } from '../../models/item.model';
+import { CrudResponse } from '../../models/crud-response.model';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class ItemService {
+
   private readonly KEY = 'items';
   private items: Item[] = [];
 
   itemSubject$ = new BehaviorSubject<Item[]>([]);
 
-  constructor(
-    private ls: LocalStorageService,
-    private toast: ToastService
-  ) {
+  constructor(private ls: LocalStorageService) {
     this.loadItems();
   }
 
-  // Load from LocalStorage
   private loadItems(): void {
     this.items = this.ls.get<Item[]>(this.KEY) || [];
-    this.itemSubject$.next([...this.items]);
+    this.emit();
   }
 
-  // Save to LocalStorage + emit update
-  private saveItems(): void {
+  private save(): void {
     this.ls.set<Item[]>(this.KEY, this.items);
+    this.emit();
+  }
+
+  private emit(): void {
     this.itemSubject$.next([...this.items]);
   }
 
-  // Add new item
-  addItem(item: Item): void {
-    this.items.push(item);
-    this.saveItems();
-    this.toast.success('Item added successfully.');
-  }
-
-  // Update existing item
-  updateItem(item: Item): void {
-    this.items = this.items.map(x =>
-      x.id === item.id ? item : x
+  add(item: Item): Observable<CrudResponse<Item>> {
+    return of(true).pipe(
+      delay(200),
+      map(() => {
+        this.items.push(item);
+        this.save();
+        return { success: true, message: 'Item added successfully.', data: item };
+      }),
+      catchError(() => throwError(() => ({ success: false, message: 'Add failed.' })))
     );
-    this.saveItems();
-    this.toast.success('Item updated successfully.');
   }
 
-  // Delete item by ID
-  deleteItem(id: number): void {
-    this.items = this.items.filter(x => x.id !== id);
-    this.saveItems();
-    this.toast.error('Item deleted successfully.');
+  update(item: Item): Observable<CrudResponse<Item>> {
+    return of(true).pipe(
+      delay(200),
+      map(() => {
+        this.items = this.items.map(i => i.id === item.id ? item : i);
+        this.save();
+        return { success: true, message: 'Item updated successfully.', data: item };
+      }),
+      catchError(() => throwError(() => ({ success: false, message: 'Update failed.' })))
+    );
   }
 
+  delete(id: number): Observable<CrudResponse<void>> {
+    return of(true).pipe(
+      delay(200),
+      map(() => {
+        this.items = this.items.filter(i => i.id !== id);
+        this.save();
+        return { success: true, message: 'Item deleted successfully.' };
+      }),
+      catchError(() => throwError(() => ({ success: false, message: 'Delete failed.' })))
+    );
+  }
 
-  // Get items belonging to a specific category
   getItemsByCategory(categoryId: number): Item[] {
     return this.items.filter(i => i.categoryIds.includes(categoryId));
   }

@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { delay, map, catchError } from 'rxjs/operators';
-import { Category, CategoryResponse } from '../../models/category.model';
+import { Category } from '../../models/category.model';
 import { LocalStorageService } from '../local-storage/local-storage.service';
+import { CrudResponse } from '../../models/crud-response.model';
 
 @Injectable({ providedIn: 'root' })
 export class CategoryService {
@@ -30,19 +31,19 @@ export class CategoryService {
     this.categorySubject$.next([...this.categories]);
   }
 
-  add(category: Category): Observable<CategoryResponse> {
+  add(category: Category): Observable<CrudResponse<Category>> {
     return of(true).pipe(
       delay(200),
       map(() => {
         this.categories.push(category);
         this.save();
-        return { success: true, message: 'Category added successfully.', data: category };
+        return { success: true, message: 'Category added successfully.', };
       }),
       catchError(() => throwError(() => ({ success: false, message: 'Add failed.' })))
     );
   }
 
-  update(category: Category): Observable<CategoryResponse> {
+  update(category: Category): Observable<CrudResponse<Category>> {
     return of(true).pipe(
       delay(200),
       map(() => {
@@ -50,13 +51,13 @@ export class CategoryService {
           c.id === category.id ? category : c
         );
         this.save();
-        return { success: true, message: 'Category updated successfully.', data: category };
+        return { success: true, message: 'Category updated successfully.' };
       }),
       catchError(() => throwError(() => ({ success: false, message: 'Update failed.' })))
     );
   }
 
-  delete(id: number): Observable<CategoryResponse> {
+  delete(id: number): Observable<CrudResponse<void>> {
     return of(true).pipe(
       delay(200),
       map(() => {
