@@ -1,0 +1,28 @@
+.table-responsive {
+    margin-top: 10px;
+}
+
+.table {
+    background: #fff;
+}
+
+.table th,
+.table td {
+    vertical-align: middle;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+@media (max-width: 576px) {
+    .table-responsive {
+        font-size: 13px;
+    }
+}

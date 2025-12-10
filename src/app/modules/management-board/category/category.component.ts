@@ -7,11 +7,18 @@ import { ItemService } from '../../../core/services/item/item.service';
 import { LoaderService } from '../../../shared/services/loader/loader.service';
 import { ToastService } from '../../../shared/services/toast/toast.service';
 import { Category } from '../../../core/models/category.model';
+import { TableComponent } from '../../../shared/components/table/table.component';
 
 @Component({
   selector: 'app-category',
   standalone: true,
-  imports: [ReactiveFormsModule, NgIf, NgFor, ConfirmPopupComponent],
+  imports: [
+    ReactiveFormsModule,
+    NgIf,
+    NgFor,
+    ConfirmPopupComponent,
+    TableComponent
+  ],
   templateUrl: './category.component.html',
   styleUrls: ['./category.component.scss']
 })
@@ -20,6 +27,11 @@ export class CategoryComponent implements OnInit {
   categoryForm!: FormGroup;
   showDeletePopup = false;
   deleteId = 0;
+  showCategoryModal = false;
+  tableColumns = [
+    { key: 'name', label: 'Name' },
+    { key: 'description', label: 'Description' }
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -47,12 +59,12 @@ export class CategoryComponent implements OnInit {
 
   openAddModal() {
     this.categoryForm.reset();
-    this.openModal();
+    this.showCategoryModal = true;
   }
 
   openEditModal(cat: any) {
     this.categoryForm.patchValue(cat);
-    this.openModal();
+    this.showCategoryModal = true;
   }
 
   saveCategory() {
@@ -71,10 +83,12 @@ export class CategoryComponent implements OnInit {
       : this.categoryService.add(payload);
 
     req$.subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.toast.success(res.message);
+      next: (res: any) => {
+        if (res?.success) {
+          this.toast.success(res.message || 'Saved successfully.');
           this.closeModal();
+        } else {
+          this.toast.error(res?.message || 'Operation failed.');
         }
         this.loader.hide();
       },
@@ -88,7 +102,7 @@ export class CategoryComponent implements OnInit {
   openDeleteConfirm(id: number) {
     const used = this.itemService.getItemsByCategory(id);
 
-    if (used.length > 0) {
+    if (used && used.length > 0) {
       this.toast.error("This category is used in items.");
       return;
     }
@@ -101,10 +115,12 @@ export class CategoryComponent implements OnInit {
     this.loader.show();
 
     this.categoryService.delete(this.deleteId).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.toast.success(res.message);
+      next: (res: any) => {
+        if (res?.success) {
+          this.toast.success(res.message || 'Deleted successfully.');
           this.showDeletePopup = false;
+        } else {
+          this.toast.error(res?.message || 'Delete failed.');
         }
         this.loader.hide();
       },
@@ -119,11 +135,17 @@ export class CategoryComponent implements OnInit {
     this.showDeletePopup = false;
   }
 
-  private openModal() {
-    document.getElementById('categoryModal')?.classList.add('show');
+  closeModal() {
+    this.showCategoryModal = false;
   }
 
-  closeModal() {
-    document.getElementById('categoryModal')?.classList.remove('show');
+  onTableAction(event: any) {
+    if (event.type === 'edit') {
+      this.openEditModal(event.row);
+    }
+
+    if (event.type === 'delete') {
+      this.openDeleteConfirm(event.row.id);
+    }
   }
 }

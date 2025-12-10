@@ -1,0 +1,49 @@
+<div class="table-responsive">
+    <table class="table table-bordered table-striped table-sm">
+        <thead class="thead-dark">
+            <tr>
+                <th *ngIf="showIndex" width="60">#</th>
+                <th *ngFor="let col of columns" [attr.width]="col.width || null">
+                    {{ col.label }}
+                </th>
+                <th *ngIf="actionsTemplate" width="120">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let row of data; let i = index; trackBy: trackByIndex">
+                <td *ngIf="showIndex">{{ i + 1 }}</td>
+                <td *ngFor="let col of columns">
+                    <ng-container [ngSwitch]="col.pipe">
+                        <ng-container *ngSwitchCase="'currency'">
+                            {{ row[col.key] | currency:'INR':'symbol':'1.0-0' }}
+                        </ng-container>
+                        <ng-container *ngSwitchDefault>
+                            <ng-container *ngIf="row[col.key] !== null && row[col.key] !== undefined; else emptyCell">
+                                <ng-container *ngIf="isPrimitive(row[col.key])">
+                                    {{ row[col.key] }}
+                                </ng-container>
+                                <ng-container *ngIf="isArray(row[col.key])">
+                                    {{ row[col.key].join(', ') }}
+                                </ng-container>
+                                <ng-container *ngIf="isObject(row[col.key])">
+                                    {{ row[col.key] | json }}
+                                </ng-container>
+                            </ng-container>
+                            <ng-template #emptyCell>-</ng-template>
+                        </ng-container>
+                    </ng-container>
+                </td>
+                <td *ngIf="actionsTemplate" class="text-center">
+                    <ng-container *ngTemplateOutlet="actionsTemplate; context: { $implicit: row }">
+                    </ng-container>
+                </td>
+            </tr>
+            <tr *ngIf="!data || data.length === 0">
+                <td class="text-center text-muted"
+                    [attr.colspan]="columns.length + (showIndex ? 1 : 0) + (actionsTemplate ? 1 : 0)">
+                    {{ emptyMessage }}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
