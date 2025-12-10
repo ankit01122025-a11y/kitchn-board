@@ -1,12 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { NgIf, NgFor, CurrencyPipe } from '@angular/common';
+import { NgIf, NgFor } from '@angular/common';
 import { ItemService } from '../../../core/services/item/item.service';
 import { CategoryService } from '../../../core/services/category/category.service';
 import { LoaderService } from '../../../shared/services/loader/loader.service';
 import { ToastService } from '../../../shared/services/toast/toast.service';
 import { MultiSelectComponent } from '../../../shared/components/multi-select/multi-select.component';
 import { ConfirmPopupComponent } from '../../../shared/components/confirm-popup/confirm-popup.component';
+import { TableComponent } from '../../../shared/components/table/table.component';
 import { Item } from '../../../core/models/item.model';
 import { Category } from '../../../core/models/category.model';
 
@@ -17,9 +18,9 @@ import { Category } from '../../../core/models/category.model';
     NgIf,
     NgFor,
     ReactiveFormsModule,
-    CurrencyPipe,
     MultiSelectComponent,
-    ConfirmPopupComponent
+    ConfirmPopupComponent,
+    TableComponent
   ],
   templateUrl: './item.component.html',
   styleUrls: ['./item.component.scss']
@@ -30,6 +31,13 @@ export class ItemComponent implements OnInit {
   itemForm!: FormGroup;
   showDeletePopup = false;
   deleteId = 0;
+
+  tableColumns = [
+    { key: 'name', label: 'Name' },
+    { key: 'description', label: 'Description' },
+    { key: 'price', label: 'Price', pipe: 'currency' },
+    { key: 'categoryNames', label: 'Categories' }
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -44,10 +52,12 @@ export class ItemComponent implements OnInit {
 
     this.categoryService.categorySubject$.subscribe(list => {
       this.categories = list;
+      this.mapCategoryNames();
     });
 
     this.itemService.itemSubject$.subscribe(list => {
       this.items = list;
+      this.mapCategoryNames();
     });
   }
 
@@ -59,6 +69,13 @@ export class ItemComponent implements OnInit {
       price: [0, Validators.required],
       categoryIds: [[]]
     });
+  }
+
+  private mapCategoryNames() {
+    this.items = this.items.map(item => ({
+      ...item,
+      categoryNames: this.getCategoryNames(item.categoryIds)
+    }));
   }
 
   openAddModal() {
@@ -133,6 +150,11 @@ export class ItemComponent implements OnInit {
       .filter(c => ids.includes(c.id))
       .map(c => c.name)
       .join(', ');
+  }
+
+  onTableAction(e: any) {
+    if (e.type === 'edit') this.openEditModal(e.row);
+    if (e.type === 'delete') this.openDeleteConfirm(e.row.id);
   }
 
   private openModal() {
