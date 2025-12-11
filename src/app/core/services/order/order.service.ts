@@ -5,11 +5,10 @@ import { delay, map, catchError } from 'rxjs/operators';
 import { CrudResponse } from '../../models/crud-response.model';
 import { LocalStorageService } from '../local-storage/local-storage.service';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class OrderService {
-  private readonly KEY = 'orders';
+
+  private readonly INDEX_KEY = 'orders_index';
   private orders: Order[] = [];
 
   orderSubject$ = new BehaviorSubject<Order[]>([]);
@@ -19,18 +18,26 @@ export class OrderService {
   }
 
   private loadOrders(): void {
-    this.orders = this.ls.get<Order[]>(this.KEY) || [];
-    this.orders.forEach(o => { if (o.autoTime == null) o.autoTime = 0; });
-    this.emit();
-  }
+    const ids = this.ls.get<number[]>(this.INDEX_KEY) || [];
 
-  private save(): void {
-    this.ls.set(this.KEY, this.orders);
-    this.emit();
-  }
+    this.orders = ids
+      .map(id => this.ls.get<Order>(`order_${id}`))
+      .filter((o): o is Order => !!o);
 
-  private emit(): void {
+    this.orders.forEach(o => {
+      if (o.autoTime == null) o.autoTime = 0;
+    });
+
     this.orderSubject$.next([...this.orders]);
+  }
+
+  private saveIndex(): void {
+    const ids = this.orders.map(o => o.id);
+    this.ls.set(this.INDEX_KEY, ids);
+  }
+
+  private saveOrder(order: Order): void {
+    this.ls.set(`order_${order.id}`, order);
   }
 
   add(order: Order): Observable<CrudResponse<Order>> {
@@ -38,7 +45,10 @@ export class OrderService {
       delay(200),
       map(() => {
         this.orders.push(order);
-        this.save();
+        this.saveOrder(order);
+        this.saveIndex();
+
+        this.orderSubject$.next([...this.orders]);
         return { success: true, message: 'Order placed successfully.' };
       }),
       catchError(() => throwError(() => ({ success: false, message: 'Add failed.' })))
@@ -50,7 +60,11 @@ export class OrderService {
       delay(200),
       map(() => {
         this.orders = this.orders.map(o => o.id === order.id ? order : o);
-        this.save();
+
+        this.saveOrder(order);
+        this.saveIndex();
+
+        this.orderSubject$.next([...this.orders]);
         return { success: true, message: 'Order updated successfully.' };
       }),
       catchError(() => throwError(() => ({ success: false, message: 'Update failed.' })))
@@ -62,7 +76,11 @@ export class OrderService {
       delay(200),
       map(() => {
         this.orders = this.orders.filter(o => o.id !== id);
-        this.save();
+
+        this.ls.remove(`order_${id}`);
+        this.saveIndex();
+
+        this.orderSubject$.next([...this.orders]);
         return { success: true, message: 'Order deleted successfully.' };
       }),
       catchError(() => throwError(() => ({ success: false, message: 'Delete failed.' })))
@@ -75,9 +93,15 @@ export class OrderService {
       map(() => {
         updatedOrders.forEach(u => {
           const idx = this.orders.findIndex(o => o.id === u.id);
-          if (idx !== -1) this.orders[idx] = u;
+          if (idx !== -1) {
+            this.orders[idx] = u;
+            this.saveOrder(u);
+          }
         });
-        this.save();
+
+        this.saveIndex();
+        this.orderSubject$.next([...this.orders]);
+
         return { success: true, message: 'Orders updated.' };
       }),
       catchError(() => throwError(() => ({ success: false, message: 'Bulk update failed.' })))

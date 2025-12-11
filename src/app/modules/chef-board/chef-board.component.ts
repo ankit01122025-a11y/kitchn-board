@@ -32,7 +32,8 @@ export class ChefBoardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadOrders();
 
-    this.orderSub = this.orderService.orderSubject$.subscribe(() => {
+    this.orderSub = this.orderService.orderSubject$.subscribe((res) => {
+      this.orders = res;
       this.loadOrders();
     });
 
@@ -50,8 +51,6 @@ export class ChefBoardComponent implements OnInit, OnDestroy {
 
 
   loadOrders() {
-    this.orders = this.orderService.orderSubject$.value || [];
-
     this.orders.forEach(o => {
       if (o.autoTime == null) o.autoTime = 0;
     });

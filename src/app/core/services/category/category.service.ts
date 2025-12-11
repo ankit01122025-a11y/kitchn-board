@@ -8,7 +8,7 @@ import { CrudResponse } from '../../models/crud-response.model';
 @Injectable({ providedIn: 'root' })
 export class CategoryService {
 
-  private readonly KEY = 'categories';
+  private readonly INDEX_KEY = 'categories_index';
   private categories: Category[] = [];
 
   categorySubject$ = new BehaviorSubject<Category[]>([]);
@@ -18,17 +18,22 @@ export class CategoryService {
   }
 
   private loadCategories(): void {
-    this.categories = this.ls.get<Category[]>(this.KEY) || [];
-    this.emit();
-  }
+    const ids = this.ls.get<number[]>(this.INDEX_KEY) || [];
 
-  private save(): void {
-    this.ls.set(this.KEY, this.categories);
-    this.emit();
-  }
+    this.categories = ids
+      .map(id => this.ls.get<Category>(`category_${id}`))
+      .filter((c): c is Category => !!c);
 
-  private emit(): void {
     this.categorySubject$.next([...this.categories]);
+  }
+
+  private saveIndex(): void {
+    const ids = this.categories.map(c => c.id);
+    this.ls.set(this.INDEX_KEY, ids);
+  }
+
+  private saveCategory(category: Category): void {
+    this.ls.set(`category_${category.id}`, category);
   }
 
   add(category: Category): Observable<CrudResponse<Category>> {
@@ -36,10 +41,16 @@ export class CategoryService {
       delay(200),
       map(() => {
         this.categories.push(category);
-        this.save();
-        return { success: true, message: 'Category added successfully.', };
+        this.saveCategory(category);
+        this.saveIndex();
+
+        this.categorySubject$.next([...this.categories]);
+
+        return { success: true, message: 'Category added successfully.' };
       }),
-      catchError(() => throwError(() => ({ success: false, message: 'Add failed.' })))
+      catchError(() =>
+        throwError(() => ({ success: false, message: 'Add failed.' }))
+      )
     );
   }
 
@@ -50,10 +61,17 @@ export class CategoryService {
         this.categories = this.categories.map(c =>
           c.id === category.id ? category : c
         );
-        this.save();
+
+        this.saveCategory(category);
+        this.saveIndex();
+
+        this.categorySubject$.next([...this.categories]);
+
         return { success: true, message: 'Category updated successfully.' };
       }),
-      catchError(() => throwError(() => ({ success: false, message: 'Update failed.' })))
+      catchError(() =>
+        throwError(() => ({ success: false, message: 'Update failed.' }))
+      )
     );
   }
 
@@ -62,10 +80,17 @@ export class CategoryService {
       delay(200),
       map(() => {
         this.categories = this.categories.filter(c => c.id !== id);
-        this.save();
+
+        this.ls.remove(`category_${id}`);
+        this.saveIndex();
+
+        this.categorySubject$.next([...this.categories]);
+
         return { success: true, message: 'Category deleted successfully.' };
       }),
-      catchError(() => throwError(() => ({ success: false, message: 'Delete failed.' })))
+      catchError(() =>
+        throwError(() => ({ success: false, message: 'Delete failed.' }))
+      )
     );
   }
 }

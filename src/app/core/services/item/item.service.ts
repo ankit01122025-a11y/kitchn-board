@@ -8,7 +8,7 @@ import { CrudResponse } from '../../models/crud-response.model';
 @Injectable({ providedIn: 'root' })
 export class ItemService {
 
-  private readonly KEY = 'items';
+  private readonly INDEX_KEY = 'items_index';
   private items: Item[] = [];
 
   itemSubject$ = new BehaviorSubject<Item[]>([]);
@@ -18,17 +18,22 @@ export class ItemService {
   }
 
   private loadItems(): void {
-    this.items = this.ls.get<Item[]>(this.KEY) || [];
-    this.emit();
-  }
+    const ids = this.ls.get<number[]>(this.INDEX_KEY) || [];
 
-  private save(): void {
-    this.ls.set<Item[]>(this.KEY, this.items);
-    this.emit();
-  }
+    this.items = ids
+      .map(id => this.ls.get<Item>(`item_${id}`))
+      .filter((i): i is Item => !!i);
 
-  private emit(): void {
     this.itemSubject$.next([...this.items]);
+  }
+
+  private saveIndex(): void {
+    const ids = this.items.map(i => i.id);
+    this.ls.set(this.INDEX_KEY, ids);
+  }
+
+  private saveItem(item: Item): void {
+    this.ls.set(`item_${item.id}`, item);
   }
 
   add(item: Item): Observable<CrudResponse<Item>> {
@@ -36,8 +41,11 @@ export class ItemService {
       delay(200),
       map(() => {
         this.items.push(item);
-        this.save();
-        return { success: true, message: 'Item added successfully.', data: item };
+        this.saveItem(item);
+        this.saveIndex();
+
+        this.itemSubject$.next([...this.items]);
+        return { success: true, message: 'Item added successfully.' };
       }),
       catchError(() => throwError(() => ({ success: false, message: 'Add failed.' })))
     );
@@ -48,8 +56,12 @@ export class ItemService {
       delay(200),
       map(() => {
         this.items = this.items.map(i => i.id === item.id ? item : i);
-        this.save();
-        return { success: true, message: 'Item updated successfully.', data: item };
+
+        this.saveItem(item);
+        this.saveIndex();
+
+        this.itemSubject$.next([...this.items]);
+        return { success: true, message: 'Item updated successfully.' };
       }),
       catchError(() => throwError(() => ({ success: false, message: 'Update failed.' })))
     );
@@ -60,7 +72,11 @@ export class ItemService {
       delay(200),
       map(() => {
         this.items = this.items.filter(i => i.id !== id);
-        this.save();
+
+        this.ls.remove(`item_${id}`);
+        this.saveIndex();
+
+        this.itemSubject$.next([...this.items]);
         return { success: true, message: 'Item deleted successfully.' };
       }),
       catchError(() => throwError(() => ({ success: false, message: 'Delete failed.' })))
