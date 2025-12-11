@@ -79,7 +79,7 @@ export class OrderComponent implements OnInit, OnDestroy {
   }
 
   openAddOrder() {
-    this.orderForm.reset();
+    this.initForm();
     this.filteredItems = [];
     this.total = 0;
     this.openModal();
