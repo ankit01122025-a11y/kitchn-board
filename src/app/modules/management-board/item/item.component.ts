@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { NgIf, NgFor } from '@angular/common';
 import { ItemService } from '../../../core/services/item/item.service';
-import { CategoryService } from '../../../core/services/category/category.service';
 import { LoaderService } from '../../../shared/services/loader/loader.service';
 import { ToastService } from '../../../shared/services/toast/toast.service';
 import { MultiSelectComponent } from '../../../shared/components/multi-select/multi-select.component';
@@ -10,6 +9,8 @@ import { ConfirmPopupComponent } from '../../../shared/components/confirm-popup/
 import { TableComponent } from '../../../shared/components/table/table.component';
 import { Item } from '../../../core/models/item.model';
 import { Category } from '../../../core/models/category.model';
+import { Store } from '@ngrx/store';
+import { selectCategories } from '../../../core/store/category/category.selectors';
 
 @Component({
   selector: 'app-item',
@@ -42,17 +43,19 @@ export class ItemComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private itemService: ItemService,
-    private categoryService: CategoryService,
     private loader: LoaderService,
-    private toast: ToastService
+    private toast: ToastService,
+    private store: Store
   ) { }
 
   ngOnInit(): void {
     this.initForm();
 
-    this.categoryService.categorySubject$.subscribe(list => {
-      this.categories = list;
-      this.mapCategoryNames();
+    this.store.select(selectCategories).subscribe((res) => {
+      this.categories = res;
+      if(this.categories.length > 0){
+        this.mapCategoryNames();
+      }
     });
 
     this.itemService.itemSubject$.subscribe(list => {

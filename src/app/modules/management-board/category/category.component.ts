@@ -1,13 +1,18 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgIf, NgFor } from '@angular/common';
+import { Store } from '@ngrx/store';
+import { Observable } from 'rxjs';
+
 import { ConfirmPopupComponent } from '../../../shared/components/confirm-popup/confirm-popup.component';
-import { CategoryService } from '../../../core/services/category/category.service';
-import { ItemService } from '../../../core/services/item/item.service';
+import { TableComponent } from '../../../shared/components/table/table.component';
 import { LoaderService } from '../../../shared/services/loader/loader.service';
 import { ToastService } from '../../../shared/services/toast/toast.service';
+import { ItemService } from '../../../core/services/item/item.service';
 import { Category } from '../../../core/models/category.model';
-import { TableComponent } from '../../../shared/components/table/table.component';
+
+import * as CategoryActions from '../../../core/store/category/category.actions';
+import { selectCategories, selectLoading } from '../../../core/store/category/category.selectors';
 
 @Component({
   selector: 'app-category',
@@ -23,11 +28,15 @@ import { TableComponent } from '../../../shared/components/table/table.component
   styleUrls: ['./category.component.scss']
 })
 export class CategoryComponent implements OnInit {
+
   categories: Category[] = [];
+  loading$!: Observable<boolean>;
+
   categoryForm!: FormGroup;
-  showDeletePopup = false;
-  deleteId = 0;
   showCategoryModal = false;
+  showDeletePopup = false;
+  deleteId = '';
+
   tableColumns = [
     { key: 'name', label: 'Name' },
     { key: 'description', label: 'Description' }
@@ -35,7 +44,7 @@ export class CategoryComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private categoryService: CategoryService,
+    private store: Store,
     private itemService: ItemService,
     private toast: ToastService,
     public loader: LoaderService
@@ -43,10 +52,11 @@ export class CategoryComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
-
-    this.categoryService.categorySubject$.subscribe(list => {
-      this.categories = list;
+    this.store.select(selectCategories).subscribe((res) => {
+      this.categories = res;
     });
+    this.loading$ = this.store.select(selectLoading);
+    this.store.dispatch(CategoryActions.loadCategories());
   }
 
   private initForm() {
@@ -54,6 +64,7 @@ export class CategoryComponent implements OnInit {
       id: null,
       name: ['', [Validators.required, Validators.maxLength(7)]],
       description: ['', [Validators.required, Validators.maxLength(9)]],
+      createdAt: null
     });
   }
 
@@ -62,7 +73,7 @@ export class CategoryComponent implements OnInit {
     this.showCategoryModal = true;
   }
 
-  openEditModal(cat: any) {
+  openEditModal(cat: Category) {
     this.categoryForm.patchValue(cat);
     this.showCategoryModal = true;
   }
@@ -70,37 +81,26 @@ export class CategoryComponent implements OnInit {
   saveCategory() {
     if (this.categoryForm.invalid) return;
 
-    const payload = {
-      ...this.categoryForm.value,
-      id: this.categoryForm.value.id ?? Date.now(),
-      createdAt: new Date().toISOString()
-    };
+    const payload: Category = this.categoryForm.value.id
+      ? { ...this.categoryForm.value, createdAt: this.categoryForm.value.createdAt }
+      : { ...this.categoryForm.value, id: Date.now().toString(), createdAt: new Date().toISOString() };
 
     this.loader.show();
 
-    const req$ = this.categoryForm.value.id
-      ? this.categoryService.update(payload)
-      : this.categoryService.add(payload);
+    if (this.categoryForm.value.id) {
+      this.store.dispatch(CategoryActions.updateCategory({ category: payload }));
+      this.toast.success('Category updated');
+    } else {
+      this.store.dispatch(CategoryActions.addCategory({ category: payload }));
+      this.toast.success('Category added');
+    }
 
-    req$.subscribe({
-      next: (res: any) => {
-        if (res?.success) {
-          this.toast.success(res.message || 'Saved successfully.');
-          this.closeModal();
-        } else {
-          this.toast.error(res?.message || 'Operation failed.');
-        }
-        this.loader.hide();
-      },
-      error: () => {
-        this.toast.error("Operation failed.");
-        this.loader.hide();
-      }
-    });
+    this.closeModal();
+    this.loader.hide();
   }
 
-  openDeleteConfirm(id: number) {
-    const used = this.itemService.getItemsByCategory(id);
+  openDeleteConfirm(id: string) {
+    const used = this.itemService.getItemsByCategory(Number(id));
 
     if (used && used.length > 0) {
       this.toast.error("This category is used in items.");
@@ -113,22 +113,10 @@ export class CategoryComponent implements OnInit {
 
   confirmDelete() {
     this.loader.show();
-
-    this.categoryService.delete(this.deleteId).subscribe({
-      next: (res: any) => {
-        if (res?.success) {
-          this.toast.success(res.message || 'Deleted successfully.');
-          this.showDeletePopup = false;
-        } else {
-          this.toast.error(res?.message || 'Delete failed.');
-        }
-        this.loader.hide();
-      },
-      error: () => {
-        this.toast.error("Delete failed.");
-        this.loader.hide();
-      }
-    });
+    this.store.dispatch(CategoryActions.deleteCategory({ id: this.deleteId }));
+    this.toast.success('Category deleted');
+    this.showDeletePopup = false;
+    this.loader.hide();
   }
 
   cancelDelete() {

@@ -4,7 +4,6 @@ import { Subscription } from 'rxjs';
 import { Category } from '../../../core/models/category.model';
 import { Item } from '../../../core/models/item.model';
 import { Order, OrderItem } from '../../../core/models/order.model';
-import { CategoryService } from '../../../core/services/category/category.service';
 import { ItemService } from '../../../core/services/item/item.service';
 import { OrderService } from '../../../core/services/order/order.service';
 import { MultiSelectComponent } from '../../../shared/components/multi-select/multi-select.component';
@@ -13,6 +12,8 @@ import { getOrderTotal } from '../../../shared/utils/common.util';
 import { LoaderService } from '../../../shared/services/loader/loader.service';
 import { ToastService } from '../../../shared/services/toast/toast.service';
 import { NgIf, NgFor, NgClass } from '@angular/common';
+import { Store } from '@ngrx/store';
+import { selectCategories } from '../../../core/store/category/category.selectors';
 
 @Component({
   selector: 'app-order',
@@ -41,23 +42,22 @@ export class OrderComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder,
-    private categoryService: CategoryService,
     private itemService: ItemService,
     private orderService: OrderService,
     public loader: LoaderService,
-    private toast: ToastService
+    private toast: ToastService,
+    private store: Store
   ) { }
 
   ngOnInit(): void {
     this.initForm();
 
-    this.subs.push(this.categoryService.categorySubject$.subscribe(list => this.categories = list));
+    this.store.select(selectCategories).subscribe((res) => {
+      this.categories = res;
+    });
+
     this.subs.push(this.itemService.itemSubject$.subscribe(list => this.allItems = list));
     this.subs.push(this.orderService.orderSubject$.subscribe(list => this.orders = list));
-
-    this.categories = this.categoryService.categorySubject$.value;
-    this.allItems = this.itemService.itemSubject$.value;
-    this.orders = this.orderService.orderSubject$.value;
   }
 
   ngOnDestroy(): void {
@@ -234,7 +234,7 @@ export class OrderComponent implements OnInit, OnDestroy {
     document.getElementById('orderModal')?.classList.add('show');
   }
 
-   closeModal() {
+  closeModal() {
     document.getElementById('orderModal')?.classList.remove('show');
   }
 }
