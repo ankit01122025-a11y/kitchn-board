@@ -7,6 +7,17 @@
       "createdAt": "2025-12-17T05:01:44.951Z"
     }
   ],
-  "items": [],
+  "items": [
+    {
+      "id": 1766047930357,
+      "name": "dd",
+      "description": "ddw",
+      "price": 44,
+      "categoryIds": [
+        "1765947704951"
+      ],
+      "createdAt": "2025-12-18T08:52:10.357Z"
+    }
+  ],
   "orders": []
 }

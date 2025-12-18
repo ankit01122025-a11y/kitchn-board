@@ -1,15 +1,20 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { NgIf, NgFor } from '@angular/common';
-import { ItemService } from '../../../core/services/item/item.service';
+import { Store } from '@ngrx/store';
+
 import { LoaderService } from '../../../shared/services/loader/loader.service';
 import { ToastService } from '../../../shared/services/toast/toast.service';
+
 import { MultiSelectComponent } from '../../../shared/components/multi-select/multi-select.component';
 import { ConfirmPopupComponent } from '../../../shared/components/confirm-popup/confirm-popup.component';
 import { TableComponent } from '../../../shared/components/table/table.component';
+
 import { Item } from '../../../core/models/item.model';
 import { Category } from '../../../core/models/category.model';
-import { Store } from '@ngrx/store';
+
+import * as ItemActions from '../../../core/store/item/item.actions';
+import { selectItems } from '../../../core/store/item/item.selectors';
 import { selectCategories } from '../../../core/store/category/category.selectors';
 
 @Component({
@@ -42,24 +47,23 @@ export class ItemComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private itemService: ItemService,
+    private store: Store,
     private loader: LoaderService,
-    private toast: ToastService,
-    private store: Store
+    private toast: ToastService
   ) { }
 
   ngOnInit(): void {
     this.initForm();
 
-    this.store.select(selectCategories).subscribe((res) => {
-      this.categories = res;
-      if(this.categories.length > 0){
-        this.mapCategoryNames();
-      }
+    this.store.dispatch(ItemActions.loadItems());
+
+    this.store.select(selectCategories).subscribe(cats => {
+      this.categories = cats;
+      this.mapCategoryNames();
     });
 
-    this.itemService.itemSubject$.subscribe(list => {
-      this.items = list;
+    this.store.select(selectItems).subscribe(items => {
+      this.items = items;
       this.mapCategoryNames();
     });
   }
@@ -75,10 +79,19 @@ export class ItemComponent implements OnInit {
   }
 
   private mapCategoryNames() {
+    if (!this.items.length || !this.categories.length) return;
+
     this.items = this.items.map(item => ({
       ...item,
       categoryNames: this.getCategoryNames(item.categoryIds)
     }));
+  }
+
+  getCategoryNames(ids: number[]): string {
+    return this.categories
+      .filter(c => ids.includes(c.id))
+      .map(c => c.name)
+      .join(', ');
   }
 
   openAddModal() {
@@ -86,7 +99,7 @@ export class ItemComponent implements OnInit {
     this.openModal();
   }
 
-  openEditModal(item: any) {
+  openEditModal(item: Item) {
     this.itemForm.patchValue(item);
     this.openModal();
   }
@@ -94,7 +107,7 @@ export class ItemComponent implements OnInit {
   saveItem() {
     if (this.itemForm.invalid) return;
 
-    const payload = {
+    const payload: Item = {
       ...this.itemForm.value,
       id: this.itemForm.value.id ?? Date.now(),
       createdAt: new Date().toISOString()
@@ -102,23 +115,16 @@ export class ItemComponent implements OnInit {
 
     this.loader.show();
 
-    const req$ = this.itemForm.value.id
-      ? this.itemService.update(payload)
-      : this.itemService.add(payload);
+    if (this.itemForm.value.id) {
+      this.store.dispatch(ItemActions.updateItem({ item: payload }));
+      this.toast.success('Item updated');
+    } else {
+      this.store.dispatch(ItemActions.addItem({ item: payload }));
+      this.toast.success('Item added');
+    }
 
-    req$.subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.toast.success(res.message);
-          this.closeModal();
-        }
-        this.loader.hide();
-      },
-      error: () => {
-        this.toast.error("Operation failed.");
-        this.loader.hide();
-      }
-    });
+    this.closeModal();
+    this.loader.hide();
   }
 
   openDeleteConfirm(id: number) {
@@ -128,31 +134,14 @@ export class ItemComponent implements OnInit {
 
   confirmDelete() {
     this.loader.show();
-
-    this.itemService.delete(this.deleteId).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.toast.success(res.message);
-          this.showDeletePopup = false;
-        }
-        this.loader.hide();
-      },
-      error: () => {
-        this.toast.error("Delete failed.");
-        this.loader.hide();
-      }
-    });
+    this.store.dispatch(ItemActions.deleteItem({ id: this.deleteId }));
+    this.toast.success('Item deleted');
+    this.showDeletePopup = false;
+    this.loader.hide();
   }
 
   cancelDelete() {
     this.showDeletePopup = false;
-  }
-
-  getCategoryNames(ids: number[]): string {
-    return this.categories
-      .filter(c => ids.includes(c.id))
-      .map(c => c.name)
-      .join(', ');
   }
 
   onTableAction(e: any) {

@@ -14,6 +14,7 @@ import { ToastService } from '../../../shared/services/toast/toast.service';
 import { NgIf, NgFor, NgClass } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { selectCategories } from '../../../core/store/category/category.selectors';
+import { selectItems } from '../../../core/store/item/item.selectors';
 
 @Component({
   selector: 'app-order',
@@ -56,7 +57,10 @@ export class OrderComponent implements OnInit, OnDestroy {
       this.categories = res;
     });
 
-    this.subs.push(this.itemService.itemSubject$.subscribe(list => this.allItems = list));
+    this.store.select(selectItems).subscribe(items => {
+      this.allItems = items;
+    });
+
     this.subs.push(this.orderService.orderSubject$.subscribe(list => this.orders = list));
   }
 

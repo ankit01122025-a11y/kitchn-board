@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgIf, NgFor } from '@angular/common';
 import { Store } from '@ngrx/store';
-import { Observable } from 'rxjs';
+import { Observable, take } from 'rxjs';
 
 import { ConfirmPopupComponent } from '../../../shared/components/confirm-popup/confirm-popup.component';
 import { TableComponent } from '../../../shared/components/table/table.component';
@@ -13,6 +13,7 @@ import { Category } from '../../../core/models/category.model';
 
 import * as CategoryActions from '../../../core/store/category/category.actions';
 import { selectCategories, selectLoading } from '../../../core/store/category/category.selectors';
+import { selectItemsByCategoryId } from '../../../core/store/item/item.selectors';
 
 @Component({
   selector: 'app-category',
@@ -100,15 +101,18 @@ export class CategoryComponent implements OnInit {
   }
 
   openDeleteConfirm(id: string) {
-    const used = this.itemService.getItemsByCategory(Number(id));
+    this.store
+      .select(selectItemsByCategoryId(Number(id)))
+      .pipe(take(1))
+      .subscribe(items => {
+        if (items.length > 0) {
+          this.toast.error('This category is used in items.');
+          return;
+        }
 
-    if (used && used.length > 0) {
-      this.toast.error("This category is used in items.");
-      return;
-    }
-
-    this.deleteId = id;
-    this.showDeletePopup = true;
+        this.deleteId = id;
+        this.showDeletePopup = true;
+      });
   }
 
   confirmDelete() {
