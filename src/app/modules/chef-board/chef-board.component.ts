@@ -1,11 +1,14 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
 import { interval, Subscription } from 'rxjs';
+import { Store } from '@ngrx/store';
 
 import { Order } from '../../core/models/order.model';
-import { OrderService } from '../../core/services/order/order.service';
 import { ToastService } from '../../shared/services/toast/toast.service';
 import { OrderStatusColumnComponent } from './order-status-column/order-status-column.component';
+
+import { selectOrders } from '../../core/store/order/order.selectors';
+import * as OrderActions from '../../core/store/order/order.actions';
 
 @Component({
   selector: 'app-chef-board',
@@ -15,7 +18,9 @@ import { OrderStatusColumnComponent } from './order-status-column/order-status-c
   styleUrls: ['./chef-board.component.scss']
 })
 export class ChefBoardComponent implements OnInit, OnDestroy {
+
   orders: Order[] = [];
+
   placed: Order[] = [];
   preparing: Order[] = [];
   ready: Order[] = [];
@@ -25,18 +30,18 @@ export class ChefBoardComponent implements OnInit, OnDestroy {
   private orderSub!: Subscription;
 
   constructor(
-    private orderService: OrderService,
+    private store: Store,
     private toast: ToastService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
-    this.loadOrders();
-
-    this.orderSub = this.orderService.orderSubject$.subscribe((res) => {
-      this.orders = res;
-      this.loadOrders();
+    this.orderSub = this.store.select(selectOrders).subscribe(res => {
+      this.orders = res.map(o => ({
+        ...o,
+        autoTime: o.autoTime ?? 0
+      }));
+      this.splitOrders();
     });
-
 
     this.timerSub = interval(1000).subscribe(() => {
       this.incrementTimers();
@@ -49,66 +54,56 @@ export class ChefBoardComponent implements OnInit, OnDestroy {
     this.orderSub?.unsubscribe();
   }
 
-
-  loadOrders() {
-    this.orders.forEach(o => {
-      if (o.autoTime == null) o.autoTime = 0;
-    });
-
+  private splitOrders() {
     this.placed = this.orders.filter(o => o.status === 'PLACED');
     this.preparing = this.orders.filter(o => o.status === 'PREPARING');
     this.ready = this.orders.filter(o => o.status === 'READY');
     this.served = this.orders.filter(o => o.status === 'SERVED');
   }
 
-  incrementTimers() {
-    this.orders.forEach(o => {
+  private incrementTimers() {
+    this.orders = this.orders.map(o => {
       if (o.status !== 'SERVED') {
-        o.autoTime! += 1;
+        return { ...o, autoTime: (o.autoTime ?? 0) + 1 };
       }
+      return o;
     });
   }
 
-  autoMoveStatus() {
-    let changed = false;
+
+  private autoMoveStatus() {
+    const updated: Order[] = [];
 
     this.orders.forEach(o => {
+      let changed = false;
+      let updatedOrder = { ...o };
 
-      if (!o.autoTime) return;
-
-      if (o.status === 'PLACED' && o.autoTime >= 10) {
-        o.status = 'PREPARING';
-        o.autoTime = 0;
+      if (o.status === 'PLACED' && o.autoTime! >= 10) {
+        updatedOrder.status = 'PREPARING';
+        updatedOrder.autoTime = 0;
         changed = true;
       }
 
-      else if (o.status === 'PREPARING' && o.autoTime >= 30) {
-        o.status = 'READY';
-        o.autoTime = 0;
+      else if (o.status === 'PREPARING' && o.autoTime! >= 30) {
+        updatedOrder.status = 'READY';
+        updatedOrder.autoTime = 0;
         changed = true;
       }
 
-      else if (o.status === 'READY' && o.autoTime >= 60) {
-        o.status = 'SERVED';
-        o.autoTime = 0;
+      else if (o.status === 'READY' && o.autoTime! >= 60) {
+        updatedOrder.status = 'SERVED';
+        updatedOrder.autoTime = 0;
         changed = true;
       }
 
+      if (changed) {
+        updated.push(updatedOrder);
+      }
     });
 
-    if (changed) {
-      this.orderService.updateOrders(this.orders).subscribe({
-        next: (res) => {
-          if (res.success) {
-            this.loadOrders();
-            this.toast.success(res.message || 'Orders updated');
-          } else {
-            console.error('Auto update failed:', res.message);
-          }
-        },
-        error: (err) => {
-          console.error('Auto update error:', err);
-        }
+    if (updated.length) {
+      updated.forEach(o => {
+        this.store.dispatch(OrderActions.updateOrder({ order: o }));
       });
     }
   }

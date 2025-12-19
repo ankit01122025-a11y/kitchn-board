@@ -9,7 +9,7 @@
   ],
   "items": [
     {
-      "id": 1766047930357,
+      "id": "1766047930357",
       "name": "dd",
       "description": "ddw",
       "price": 44,
@@ -19,5 +19,25 @@
       "createdAt": "2025-12-18T08:52:10.357Z"
     }
   ],
-  "orders": []
+  "orders": [
+    {
+      "id": "1766135337246",
+      "categoryIds": [
+        "1765947704951"
+      ],
+      "items": [
+        {
+          "itemId": "1766047930357",
+          "name": "dd",
+          "description": "ddw",
+          "price": 44,
+          "qty": 1,
+          "total": 44
+        }
+      ],
+      "status": "SERVED",
+      "createdAt": "2025-12-19T09:09:25.285Z",
+      "autoTime": 0
+    }
+  ]
 }

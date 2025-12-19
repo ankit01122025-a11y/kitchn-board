@@ -9,17 +9,21 @@ import { categoryReducer } from './app/core/store/category/category.reducer';
 import { CategoryEffects } from './app/core/store/category/category.effects';
 import { itemReducer } from './app/core/store/item/item.reducer';
 import { ItemEffects } from './app/core/store/item/item.effects';
+import { orderReducer } from './app/core/store/order/order.reducer';
+import { OrderEffects } from './app/core/store/order/order.effects';
 
 bootstrapApplication(AppComponent, {
   providers: [
     provideHttpClient(),
     provideStore({
       categories: categoryReducer,
-      items: itemReducer
+      items: itemReducer,
+      orders: orderReducer
     }),
     provideEffects([
       CategoryEffects,
-      ItemEffects
+      ItemEffects,
+      OrderEffects
     ]),
     provideStoreDevtools({
       maxAge: 25,
